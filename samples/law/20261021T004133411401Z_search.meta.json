@@ -1,0 +1,14 @@
+{
+  "fetched_at": "2026-10-21T00:41:33.411401+00:00",
+  "endpoint": "https://www.law.go.kr/DRF/lawSearch.do",
+  "parameters": {
+    "type": "JSON",
+    "target": "law",
+    "query": "금융소비자 보호에 관한 법률",
+    "display": "5",
+    "page": "1"
+  },
+  "http_status": 200,
+  "content_type": "application/json;charset=UTF-8",
+  "json_parsed": true
+}
