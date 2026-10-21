@@ -1,6 +1,7 @@
 """검토 서비스 진입점. 업무 순서와 상태 관리는 LangGraph에 위임한다."""
 
 from datetime import date
+from collections.abc import Awaitable, Callable
 
 from langchain_core.language_models.chat_models import BaseChatModel
 
@@ -17,12 +18,22 @@ async def review_ad(
     ad_text: str, *, provider: RegulationProvider, as_of_date: date,
     product: ProductSnapshot | None = None, extract_model: BaseChatModel | None = None,
     judge_model: BaseChatModel | None = None,
+    on_update: Callable[[str, dict], Awaitable[None]] | None = None,
 ) -> ReviewDraft:
     if not ad_text.strip():
         raise ValueError('광고 원문이 비어 있습니다')
-    result = await _graph.ainvoke(
+    result = None
+    async for update in _graph.astream(
         {'ad_text': ad_text, 'as_of_date': as_of_date, 'product': product},
         context=ReviewContext(provider=provider, extract_model=extract_model, judge_model=judge_model),
         config={'run_name': 'review_ad_draft'},
-    )
-    return result['draft']
+        stream_mode='updates',
+    ):
+        for node, data in update.items():
+            if on_update is not None:
+                await on_update(node, data)
+            if node == 'finalize':
+                result = data['draft']
+    if result is None:
+        raise RuntimeError('그래프가 리포트를 반환하지 않았습니다')
+    return result

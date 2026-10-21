@@ -6,7 +6,11 @@
 
 from typing import Annotated, Any
 
-from pydantic import BaseModel, BeforeValidator, ConfigDict, Field
+from pydantic import BaseModel, BeforeValidator, ConfigDict, Field, model_validator
+from typing_extensions import TypeAliasType
+
+# 일부 목내용은 문자열이 아니라 문자열을 담은 중첩 목록으로 내려온다.
+LawText = TypeAliasType('LawText', str | list['LawText'])
 
 
 def _object_or_list(value: Any) -> list[Any]:
@@ -46,10 +50,10 @@ class LawSearchResponse(LawAPIModel):
 
 
 class LawSubitem(LawAPIModel):
-    """목. 아직 실제 샘플이 없어 합성 테스트로만 형태를 확인한다."""
+    """목. 전체 응답에서는 목내용이 중첩 목록인 경우도 확인되었다."""
 
     number: str = Field(alias="목번호")
-    text: str = Field(alias="목내용")
+    text: LawText = Field(alias="목내용")
 
 
 class LawItem(LawAPIModel):
@@ -61,16 +65,25 @@ class LawItem(LawAPIModel):
 
 
 class LawParagraph(LawAPIModel):
-    number: str = Field(alias="항번호")
-    text: str = Field(alias="항내용")
+    # 항 구분 없이 호가 직접 이어지는 실제 법령도 있다.
+    number: str | None = Field(default=None, alias="항번호")
+    text: str | None = Field(default=None, alias="항내용")
     items: Annotated[list[LawItem], BeforeValidator(_object_or_list)] = Field(
         default_factory=list, alias="호",
     )
+
+    @model_validator(mode='after')
+    def require_content(self) -> 'LawParagraph':
+        if not self.text and not self.items:
+            raise ValueError('항 본문 또는 하위 호가 필요합니다')
+        return self
 
 
 class LawArticle(LawAPIModel):
     number: str = Field(alias="조문번호")
     article_key: str = Field(alias="조문키")
+    article_kind: str = Field(default='조문', alias='조문여부')
+    branch_number: str | None = Field(default=None, alias='조문가지번호')
     title: str | None = Field(default=None, alias="조문제목")
     text: str = Field(alias="조문내용")
     effective_date: str = Field(alias="조문시행일자")

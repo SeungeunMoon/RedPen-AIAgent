@@ -5,7 +5,7 @@
 """
 
 from datetime import date
-from typing import Annotated
+from typing import Annotated, Literal
 
 from pydantic import (
     AwareDatetime,
@@ -43,6 +43,9 @@ class RegulationChunk(BaseModel):
     law_id: NonBlankText = Field(description="앞자리 0을 보존한 법령 식별자")
     version_id: NonBlankText = Field(description="조회한 법령 버전을 식별하는 값")
     law_name: NonBlankText = Field(description="법령 또는 규정의 이름")
+    source_kind: Literal['law', 'administrative_rule'] = 'law'
+    hierarchy: list[str] = Field(default_factory=list, description='상위 편·장·절·관 제목')
+    source_path: str | None = Field(default=None, description='원본 JSON의 본문 위치')
 
     # 숫자형으로 바꾸지 않아 가지번호와 목의 문자 표현을 보존한다.
     article_no: NonBlankText = Field(description="조 번호. 예: 22, 10의2")
