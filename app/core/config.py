@@ -33,6 +33,11 @@ class Settings(BaseSettings):
     # LLM 전환과 독립. 규정 적재와 검색에서 동일한 임베딩을 사용한다.
     embedding_model: Literal["text-embedding-3-small"] = "text-embedding-3-small"
     embedding_base_url: str = "https://api.openai.com/v1"
+    embedding_timeout_seconds: float = Field(default=60, gt=0)
+    embedding_max_retries: int = Field(default=1, ge=0)
+    pgvector_connection: SecretStr = SecretStr(
+        'postgresql+psycopg://redpen:redpen@127.0.0.1:5433/redpen'
+    )
 
     @model_validator(mode="after")
     def validate_openai_key(self) -> "Settings":

@@ -7,3 +7,6 @@ web/dist/
 __pycache__/
 *.pyc
 .pytest_cache/
+
+# Local troubleshooting notes and response artifacts
+/.local/troubleshooting/

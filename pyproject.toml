@@ -4,11 +4,19 @@ version = "0.1.0"
 description = "Financial advertisement review agent"
 requires-python = ">=3.11"
 dependencies = [
+    "fastapi>=0.115,<1",
+    "uvicorn>=0.30,<1",
+    "httpx>=0.28,<1",
+    "python-dotenv>=1,<2",
     "langgraph>=1,<2",
     "langchain-core>=1,<2",
     "langchain-openai>=1,<2",
     "langchain-ollama>=1,<2",
     "pydantic-settings>=2,<3",
+    "langchain-text-splitters>=1,<2",
+    "langchain-postgres>=0.0.16,<0.1",
+    "psycopg[binary]>=3.2,<4",
+    "tiktoken>=0.7,<1",
 ]
 
 [dependency-groups]
