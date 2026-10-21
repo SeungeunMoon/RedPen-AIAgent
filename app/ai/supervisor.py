@@ -53,9 +53,10 @@ def supervisor_node(state) -> dict:
     return {'tasks':tasks,'events':events,'next_node':'finalize','active_task_id':None}
 
 
-def finish_task(state, *, status='succeeded', reason=None, error_code=None, retryable=False) -> dict:
+def finish_task(state, *, status='succeeded', reason=None, error_code=None, retryable=False, diagnostic_id=None) -> dict:
     tasks=[task.model_copy(deep=True) for task in state['tasks']]
     task=next(task for task in tasks if task.task_id == state['active_task_id'])
     task.status=status; task.feedback=reason; task.error_code=error_code; task.retryable=retryable
-    event=TaskEvent(task_id=task.task_id,status=status,attempt=task.attempts,reason=reason)
+    task.diagnostic_id=diagnostic_id
+    event=TaskEvent(task_id=task.task_id,status=status,attempt=task.attempts,reason=reason,diagnostic_id=diagnostic_id)
     return {'tasks':tasks,'events':[*state.get('events',[]),event]}

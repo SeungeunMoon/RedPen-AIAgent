@@ -23,6 +23,7 @@ class Settings(BaseSettings):
     llm_temperature: float | None = None
     llm_timeout_seconds: float = Field(default=60, gt=0)
     llm_max_retries: int = Field(default=1, ge=0)
+    llm_num_ctx: int = Field(default=16384, ge=1024, description='Ollama 컨텍스트 길이. RAG 규정과 출력 공간 포함')
 
     llm_extract_model: str | None = None
     llm_retrieve_model: str | None = None
@@ -39,6 +40,7 @@ class Settings(BaseSettings):
     regulation_provider: Literal['rag', 'fixed', 'empty'] = 'rag'
     rag_index_report: Path = PROJECT_ROOT / 'data/regulations/processed/20261021T043743991211Z-whole-article-v1-chunks-1200-v1/index-report-bge-m3.json'
     rag_top_k: int = Field(default=4, ge=1, le=20)
+    rag_search_method: Literal['dense', 'mmr'] = 'dense'
     rag_max_chunks: int = Field(default=12, ge=1, le=40)
     pgvector_connection: SecretStr = SecretStr(
         'postgresql+psycopg://redpen:redpen@127.0.0.1:5433/redpen'

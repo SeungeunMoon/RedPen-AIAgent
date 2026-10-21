@@ -30,6 +30,7 @@ def get_chat_model(
     
     return ChatOllama(
         model=model_name,
+        num_ctx=config.llm_num_ctx,
         base_url=config.llm_base_url or "http://localhost:11434",
         client_kwargs={"timeout": config.llm_timeout_seconds},
         **temperature,

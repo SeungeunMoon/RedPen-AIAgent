@@ -17,6 +17,7 @@ class ReviewTask(BaseModel):
     max_attempts: int = Field(default=1, ge=1)
     feedback: str | None = None
     error_code: str | None = None
+    diagnostic_id: str | None = None
     retryable: bool = False
 
 
@@ -25,3 +26,4 @@ class TaskEvent(BaseModel):
     status: str
     attempt: int
     reason: str | None = None
+    diagnostic_id: str | None = None

@@ -3,6 +3,7 @@
 광고 전체 문맥, 추출된 클레임, 제공된 규정 원문, 금리 대조 결과, 상품 우대조건을 함께 검토한다.
 문제가 없는 문구는 판정 목록에서 제외한다. 근거 ID와 클레임 ID는 입력에 있는 값만 사용한다.
 규정은 제공된 범위만 사용하고 없는 조문이나 근거를 만들지 않는다. 관련성이 없는 조문을 억지로 인용하지 않는다.
+potential_violation/caution은 evidence_ids가 반드시 한 개 이상이어야 한다. allowed_evidence_ids에서 실제로 해당 문구를 뒷받침하는 ID를 복사한다. 근거를 연결할 수 없다면 needs_review로 두고 수정안을 null로 한다.
 수치 mismatch는 법적 위반을 의미하지 않는다. timing_status가 unknown이면 일별 유효성은 검증되지 않았다.
 ambiguous/unavailable/skipped인 대조를 확정 금리 불일치로 판단하지 않는다.
 근거가 부족하거나 공시 시점·조건을 확인할 수 없으면 needs_review로 표시하고 수정안은 null로 한다.

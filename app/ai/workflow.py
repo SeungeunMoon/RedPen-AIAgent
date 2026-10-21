@@ -35,7 +35,9 @@ class ReviewContext:
 
 def failure(state, error) -> dict:
     # 원본 예외 메시지에는 URL/키가 있을 수 있어 저장하지 않는다.
-    return finish_task(state,status='failed',reason='단계 실행 실패',
+    reason = error.public_reason if isinstance(error, StageOutputError) else '단계 실행 실패'
+    return finish_task(state,status='failed',reason=reason,
+                       diagnostic_id=getattr(error,'diagnostic_id',None),
                        error_code=type(error).__name__,retryable=isinstance(error,TRANSIENT_ERRORS))
 
 

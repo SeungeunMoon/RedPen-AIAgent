@@ -15,13 +15,16 @@ from app.schemas.regulation import RegulationChunk
 
 class RagRegulationProvider:
     def __init__(self, store, *, snapshot_date: date, corpus_hash: str, top_k: int = 4,
-                 max_chunks: int = 12, engine=None):
+                 max_chunks: int = 12, engine=None, search_method: str = 'dense'):
+        if search_method not in {'dense', 'mmr'}:
+            raise ValueError('지원하지 않는 검색 방식')
         self._store = store
         self._snapshot_date = snapshot_date
         self._corpus_hash = corpus_hash
         self._top_k = top_k
         self._max_chunks = max_chunks
         self._engine = engine
+        self._search_method = search_method
 
     @classmethod
     def from_settings(cls, settings: Settings):
@@ -40,7 +43,32 @@ class RagRegulationProvider:
         engine, store = open_store(settings, table, get_embeddings(settings=settings), create_if_missing=False)
         return cls(store, snapshot_date=date.fromisoformat(report['snapshot_dates'][0]),
                    corpus_hash=report['corpus_hash'], top_k=settings.rag_top_k,
-                   max_chunks=settings.rag_max_chunks, engine=engine)
+                   max_chunks=settings.rag_max_chunks, engine=engine,
+                   search_method=settings.rag_search_method)
+
+    def _search(self, query, *, k, filters):
+        if self._search_method == 'mmr':
+            return self._store.max_marginal_relevance_search(
+                query, k=k, fetch_k=max(20, k * 4), lambda_mult=0.5, filter=filters)
+        return self._store.similarity_search(query, k=k, filter=filters)
+
+    async def search_query(self, query: str, *, as_of_date: date, k: int = 10):
+        """단일 질의 검색 평가용. 운영과 같은 필터 및 모델 복원 경로를 쓴다."""
+        if not query.strip() or not 1 <= k <= 40:
+            raise ValueError('검색 질의와 k 범위를 확인하세요')
+        if as_of_date != self._snapshot_date:
+            raise UnsupportedRegulationDateError('RAG 규정은 스냅샷 조회일에만 제공할 수 있습니다')
+        filters = {'$and': [{'corpus_hash': {'$eq': self._corpus_hash}},
+                            {'effective_from': {'$lte': as_of_date.isoformat()}}]}
+        documents = await asyncio.to_thread(self._search, query, k=k, filters=filters)
+        result = []
+        for document in documents:
+            if document.metadata.get('corpus_hash') != self._corpus_hash:
+                raise ValueError('다른 corpus의 검색 결과입니다')
+            chunk = RegulationChunk.model_validate(document.metadata['regulation'])
+            if chunk.effective_from <= as_of_date and (chunk.effective_to is None or as_of_date < chunk.effective_to):
+                result.append(chunk)
+        return result
 
     async def provide(self, claims: Sequence[Claim], *, as_of_date: date) -> list[RegulationChunk]:
         # 종료일 미확정인 현행 스냅샷: 조회일 외의 효력을 추정하지 않는다.
@@ -55,7 +83,7 @@ class RagRegulationProvider:
         ]}
         # 동기 PGVectorStore 작업을 이벤트 루프 밖에서 실행한다.
         def search():
-            return [self._store.similarity_search(query, k=self._top_k, filter=filters) for query in queries]
+            return [self._search(query, k=self._top_k, filters=filters) for query in queries]
         groups = await asyncio.to_thread(search)
         selected = {}
         # 쿼리별 첫 근거부터 순환해 긴 광고의 뒤쪽 클레임도 기회를 갖도록 한다.
