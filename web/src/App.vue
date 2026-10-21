@@ -8,6 +8,7 @@ const sample = '12개월 정기예금, 세전 단리 최고 연 4.5%!\n누구나
 const text = ref(''), selected = ref(''), search = ref(''), picker = ref(false), asOf = ref('2026-10-21')
 const products = ref([]), loading = ref(true), loadError = ref(''), active = ref(null), filter = ref('전체'), tab = ref('original')
 const toast = ref(''), feedback = ref({}), rejectId = ref(null), reason = ref('')
+const removedEvidence = ref({})
 let toastTimer
 const { status: mode, report, error, tasks, receivedVerdicts, reconnecting, start: run, clear } = useRunEvents()
 const running = computed(() => mode.value === 'running')
@@ -21,7 +22,9 @@ const available = computed(() => (report.value?.judgment?.verdicts ?? receivedVe
   const claim = report.value?.extraction?.claims.find(c => c.id === v.claim_id)
   const rules = (report.value?.regulations ?? []).filter(r => v.evidence_ids.includes(r.chunk_id))
   const comparison = report.value?.comparisons.find(c => c.claim_id === v.claim_id)
-  return { ...v, level: level[v.severity], tone: tone[v.severity], type: types[v.violation_type],
+  const unresolved = (v.unresolved_evidence_ids ?? []).filter(id => !(removedEvidence.value[v.id] ?? []).includes(id))
+  return { ...v, unresolved, removedEvidenceCount: (removedEvidence.value[v.id] ?? []).length,
+    level: level[v.severity], tone: tone[v.severity], type: types[v.violation_type],
     quote: claim?.quote ?? `클레임 ${v.claim_id ?? v.checklist_item_id}`, claim, rules, comparison }
 }))
 const visible = computed(() => available.value.filter(i => filter.value === '전체' || i.level === filter.value))
@@ -61,10 +64,15 @@ const segments = computed(() => {
   return result
 })
 function notify(message) { toast.value = message; clearTimeout(toastTimer); toastTimer = setTimeout(() => toast.value = '', 2500) }
-function reset() { if (running.value) return; clear(); text.value = ''; active.value = null; feedback.value = {}; filter.value = '전체'; tab.value = 'original' }
+function reset() { if (running.value) return; clear(); text.value = ''; active.value = null; feedback.value = {}; removedEvidence.value = {}; filter.value = '전체'; tab.value = 'original' }
+function removeEvidence(verdictId, evidenceId) {
+  removedEvidence.value = { ...removedEvidence.value,
+    [verdictId]: [...new Set([...(removedEvidence.value[verdictId] ?? []), evidenceId])] }
+  notify('미확인 근거를 화면에서 삭제했습니다. 판정은 계속 사람 확인이 필요합니다.')
+}
 async function start() {
   if (!text.value.trim() || running.value) return
-  active.value = null; feedback.value = {}; filter.value = '전체'; tab.value = 'original'
+  active.value = null; feedback.value = {}; removedEvidence.value = {}; filter.value = '전체'; tab.value = 'original'
   await run({ ad_text: text.value, product_id: selected.value || null, as_of_date: asOf.value })
 }
 function reject() { if (!reason.value.trim()) return; feedback.value[rejectId.value] = '기각 (화면만 반영)'; rejectId.value = null; reason.value = '' }
@@ -94,7 +102,7 @@ onUnmounted(() => clearTimeout(toastTimer))
     <p v-if="loadError" class="error-banner" role="alert">서버 연결 실패: {{loadError}} · FastAPI 실행 여부를 확인한 뒤 새로고침하세요.</p>
     <div v-if="error" class="error-banner" role="alert">{{error}} <button v-if="mode==='failed'" class="button secondary" @click="start">같은 문안 재시도</button><button v-if="mode==='failed'" class="button secondary" @click="clear">문안 수정</button></div>
     <section v-if="mode!=='input'" class="progress-panel">
-     <div class="progress-title"><span class="success-ring">{{running?'◌':mode==='failed'?'!':'✓'}}</span><strong>{{running?(reconnecting?'진행 연결을 복구하고 있어요':'광고 문안을 검토하고 있어요'):mode==='failed'?'검토가 완료되지 않았습니다':'AI 1차 검토가 끝났습니다 · 근거 검증 미수행'}}</strong><span>{{running?currentTask:report?.run_status}}</span></div>
+     <div class="progress-title"><span class="success-ring">{{running?'◌':mode==='failed'||report?.run_status==='partial'?'!':'✓'}}</span><strong>{{running?(reconnecting?'진행 연결을 복구하고 있어요':'광고 문안을 검토하고 있어요'):mode==='failed'?'검토가 완료되지 않았습니다':report?.run_status==='partial'?'검토 종료 · 일부 판정은 사람 확인 필요':'AI 1차 검토가 끝났습니다 · 근거 검증 미수행'}}</strong><span>{{running?currentTask:report?.run_status}}</span></div>
      <div class="steps"><div v-for="(step,index) in stepNames" :key="step" class="step" :class="{complete:stage>index,current:running&&stage===index}"><span class="step-circle">{{stage>index?'✓':index+1}}</span>{{step}}<span v-if="index<3" class="step-connector"></span></div></div>
      <details v-if="tasks.length" class="task-details"><summary>Supervisor 작업 내역 ({{tasks.length}}개)</summary><div v-for="task in tasks" :key="task.task_id"><code>{{task.task_id}}</code><span>{{taskStatus[task.status]}} · {{task.attempts ?? task.attempt ?? 0}}회 {{task.feedback ?? task.reason ?? ''}} {{task.error_code ?? ''}} <code v-if="task.diagnostic_id">진단: {{task.diagnostic_id}}</code></span></div></details>
     </section>
@@ -124,6 +132,11 @@ onUnmounted(() => clearTimeout(toastTimer))
         <div v-if="active===issue.id" class="verdict-detail"><p>{{issue.reason}}</p>
          <div v-if="issue.comparison" class="evidence"><div class="evidence-title">금리 대조 · {{issue.comparison.status}}</div><p>{{issue.comparison.reason}}</p><div v-if="issue.comparison.disclosed_rate!==null" class="comparison"><div><span>광고</span><strong>{{issue.comparison.advertised_rate}}%</strong></div><span>→</span><div><span>공시 옵션</span><strong>{{issue.comparison.disclosed_rate}}%</strong></div><span class="difference">{{issue.comparison.difference_pp}}%p 차이</span></div></div>
          <div v-for="rule in issue.rules" :key="rule.chunk_id" class="evidence"><div class="evidence-title"><span>{{rule.law_name}} 제{{rule.article_no}}조</span><span>원천 검증 미수행</span></div><p class="law-text">{{rule.text}}</p><div class="evidence-meta">시행일 {{rule.effective_from}} · <a :href="rule.source_url" target="_blank" rel="noopener noreferrer">출처 열기 ↗</a></div></div><div v-if="!issue.rules.length" class="evidence"><p>{{running?'리포트 완료 후 근거 연결을 확인할 수 있습니다.':'이 판정에 연결된 규정 근거가 없습니다.'}}</p></div>
+         <div v-for="evidenceId in issue.unresolved" :key="evidenceId" class="evidence evidence-warning">
+          <div class="evidence-title"><strong>⚠ 확인되지 않은 근거</strong><button class="button secondary" :disabled="running" @click="removeEvidence(issue.id, evidenceId)">삭제</button></div>
+          <p>이번 검색 결과에 없는 ID입니다. 연결할 규정 원문과 출처를 확인할 수 없습니다.</p><code>{{evidenceId}}</code>
+         </div>
+         <p v-if="issue.unresolved.length || issue.removedEvidenceCount" class="evidence-review-note">미확인 근거 {{issue.removedEvidenceCount ? `${issue.removedEvidenceCount}개를 화면에서 삭제했습니다. ` : ''}}삭제해도 판정은 검증 완료로 바뀌지 않습니다. 정상 근거 확인 또는 판정 기각이 필요합니다.</p>
          <div v-if="issue.suggested_revision" class="suggestion"><span>✧ 수정 제안 · 미검증</span><p>{{issue.suggested_revision}}</p></div>
          <div class="card-actions"><span>의견은 화면에서만 반영됩니다</span><button @click="rejectId=issue.id">기각</button><button class="agree" @click="feedback[issue.id]='동의 (화면만 반영)'">✓ 동의</button></div>
         </div>

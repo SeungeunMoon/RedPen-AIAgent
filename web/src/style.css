@@ -14,3 +14,5 @@
 button,input{min-height:36px}
 .highlight{min-height:0}
 @media(max-width:860px){.topbar{height:auto;min-height:64px;gap:12px;flex-wrap:wrap;padding-top:12px;padding-bottom:12px}.heading-row{align-items:flex-start}.meta-right{flex-wrap:wrap}.comparison{flex-wrap:wrap}.difference{white-space:normal}}
+
+.evidence-warning{background:#fff7e9;border-color:#e4c78e}.evidence-warning code{display:block;overflow-wrap:anywhere;font-size:12px;color:#8c6230}.evidence-warning .evidence-title{align-items:center;color:#8c6230}.evidence-review-note{font-size:13px;line-height:1.8;color:#8c6230}

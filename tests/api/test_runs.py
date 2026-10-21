@@ -39,6 +39,26 @@ def test_health_and_real_sample_products(client):
     assert products[0]['options'][0]['base_rate'] is not None
 
 
+def test_unresolved_evidence_is_partial_report_without_error_event(client):
+    from app.schemas.verdict import ClaimVerdict, VerificationResult
+    async def partial_runner(ad_text, *, on_update, **kwargs):
+        judgment=JudgmentResult(verdicts=[ClaimVerdict(
+            id='v1',claim_id='c1',violation_type='exaggeration',severity='needs_review',
+            original_severity='caution',reason='합성: 미확인 근거',
+            unresolved_evidence_ids=['missing'],verification=VerificationResult(source_exists='unavailable'))])
+        await on_update('judge',{'judgment':judgment})
+        return ReviewDraft(regulations=[],comparisons=[],judgment=judgment,run_status='partial')
+    client.app.state.manager.runner=partial_runner
+    created=client.post('/api/runs',json={'ad_text':'합성 광고','as_of_date':'2026-10-21'})
+    run_id=created.json()['run_id']
+    events=client.get(f'/api/runs/{run_id}/events').text
+    assert 'event: verdict' in events and 'event: done' in events
+    assert 'event: error' not in events
+    result=client.get(f'/api/runs/{run_id}').json()
+    assert result['status']=='partial'
+    assert result['report']['judgment']['verdicts'][0]['unresolved_evidence_ids']==['missing']
+
+
 def test_create_stream_and_report_with_replay(client):
     client.app.state.manager.runner=fake_runner
     response=client.post('/api/runs',json={'ad_text':'테스트 광고','as_of_date':'2026-10-21'})

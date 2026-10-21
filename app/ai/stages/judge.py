@@ -8,7 +8,7 @@ from typing import Literal
 from langchain_core.exceptions import OutputParserException
 from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_core.prompts import ChatPromptTemplate
-from pydantic import Field, ValidationError
+from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator
 
 from app.ai.llm import get_chat_model
 from app.ai.errors import StageOutputError, output_failure
@@ -19,18 +19,38 @@ from app.schemas.verdict import ClaimVerdict, JudgmentResult, VerificationResult
 from app.schemas.regulation import NonBlankText
 
 
-class SupportedVerdict(ClaimVerdict):
+class ModelClaimVerdict(BaseModel):
+    """모델 출력 계약. 내부 판정의 참조 정합성은 변환 단계에서 처리한다."""
+    model_config = ConfigDict(extra='forbid')
+    id: NonBlankText
+    claim_id: NonBlankText
+    checklist_item_id: NonBlankText | None = None
+    violation_type: Literal['disclosure_mismatch', 'exaggeration', 'misleading_guarantee']
+    severity: Literal['potential_violation', 'caution', 'needs_review']
+    reason: NonBlankText
+    evidence_ids: list[NonBlankText] = Field(default_factory=list)
+    suggested_revision: NonBlankText | None = None
+    verification: VerificationResult = Field(default_factory=VerificationResult)
+
+    @field_validator('evidence_ids',mode='before')
+    @classmethod
+    def deduplicate_evidence(cls,value):
+        return list(dict.fromkeys(value)) if isinstance(value,list) and all(isinstance(v,str) for v in value) else value
+
+
+class SupportedVerdict(ModelClaimVerdict):
     """Pydantic 사후 검사뿐 아니라 생성 JSON 스키마에도 근거 필수를 표현한다."""
     severity: Literal['potential_violation', 'caution']
     evidence_ids: list[NonBlankText] = Field(min_length=1)
 
 
-class NeedsReviewVerdict(ClaimVerdict):
+class NeedsReviewVerdict(ModelClaimVerdict):
     severity: Literal['needs_review']
     suggested_revision: None = None
 
 
-class ModelJudgmentResult(JudgmentResult):
+class ModelJudgmentResult(BaseModel):
+    model_config = ConfigDict(extra='forbid')
     verdicts: list[SupportedVerdict | NeedsReviewVerdict]
 
 
@@ -73,23 +93,38 @@ async def judge_ad(
                 if output.get('parsing_error') is not None:
                     raise output['parsing_error']
                 output = output['parsed']
-            result = JudgmentResult.model_validate(output)
+            result = ModelJudgmentResult.model_validate(output)
             ids = [v.id for v in result.verdicts]
             if len(ids) != len(set(ids)):
                 raise ValueError('중복 판정 ID')
+            verdicts = []
             for verdict in result.verdicts:
                 if verdict.violation_type == 'missing_notice':
                     raise ValueError('체크리스트 미연결: 누락 판정은 아직 지원하지 않습니다')
                 if verdict.claim_id not in claim_ids:
                     raise ValueError('알 수 없는 클레임 ID')
-                verdict.validate_evidence(evidence_ids)
-                if verdict.violation_type == 'disclosure_mismatch' and verdict.severity != 'needs_review':
+                original_severity = verdict.severity
+                data = verdict.model_dump()
+                unresolved = [identifier for identifier in verdict.evidence_ids if identifier not in evidence_ids]
+                valid = [identifier for identifier in verdict.evidence_ids if identifier in evidence_ids]
+                verification = VerificationResult()
+                if unresolved:
+                    data['severity'] = 'needs_review'
+                    data['suggested_revision'] = None
+                    verification = VerificationResult(source_exists='unavailable',
+                        reason='검색 결과에 없는 근거 ID가 포함돼 있어 사람 확인이 필요합니다.')
+                if verdict.violation_type == 'disclosure_mismatch' and data['severity'] != 'needs_review':
                     related = [c for c in comparisons if c.claim_id == verdict.claim_id]
                     if not any(c.status == 'mismatch' and c.timing_status == 'aligned' for c in related):
                         raise ValueError('시점과 수치를 확인하지 못한 금리 판정은 사람 확인이 필요합니다')
                 # LLM의 자체 검증 주장을 제거한다. 실제 검증은 아직 수행하지 않았다.
-                verdict.verification = VerificationResult()
-            return result
+                verdicts.append(ClaimVerdict.model_validate({
+                    **data, 'evidence_ids':valid,
+                    'unresolved_evidence_ids':unresolved,
+                    'original_severity':original_severity if unresolved else None,
+                    'verification':verification,
+                }))
+            return JudgmentResult(verdicts=verdicts)
         except (ValueError, ValidationError, OutputParserException) as error:
             if attempt:
                 raise output_failure('judge', error, raw_output=raw_output) from error

@@ -73,7 +73,8 @@ async def judge_node(state: ReviewState, runtime: Runtime[ReviewContext]) -> dic
             state['ad_text'],state['extraction'],state['regulations'],
             list(state.get('comparisons_by_claim',{}).values()),
             product=state['product'],model=runtime.context.judge_model)
-        return {**finish_task(state),'judgment':judgment}
+        unresolved = any(verdict.unresolved_evidence_ids for verdict in judgment.verdicts)
+        return {**finish_task(state,reason='확인되지 않은 근거가 있어 일부 판정은 사람 확인이 필요합니다' if unresolved else None),'judgment':judgment}
     except EXPECTED_ERRORS as error:
         return failure(state,error)
 
@@ -81,7 +82,8 @@ async def judge_node(state: ReviewState, runtime: Runtime[ReviewContext]) -> dic
 def finalize_node(state: ReviewState) -> dict:
     tasks=state['tasks']
     failed=any(t.status in {'failed','blocked'} for t in tasks)
-    status='failed' if 'judgment' not in state else ('partial' if failed else 'completed')
+    unresolved = any(v.unresolved_evidence_ids for v in state['judgment'].verdicts) if 'judgment' in state else False
+    status='failed' if 'judgment' not in state else ('partial' if failed or unresolved else 'completed')
     return {'draft': ReviewDraft(
         extraction=state.get('extraction'),regulations=state.get('regulations',[]),
         comparisons=list(state.get('comparisons_by_claim',{}).values()),

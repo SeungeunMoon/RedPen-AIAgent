@@ -85,18 +85,56 @@ def test_pipeline_uses_extracted_claims_in_comparison_and_context():
     assert result.verification_status == 'not_performed'
 
 
-def test_judge_receives_real_fixed_evidence_and_rejects_invented_id():
+def test_judge_preserves_invented_id_as_review_warning():
     provider=FixedRegulationProvider.from_law_sample(ROOT/'samples/law/20261021T004141864078Z_article.json')
     ext=ExtractionResult.model_validate(extraction())
     rules=asyncio.run(provider.provide(ext.claims,as_of_date=date(2026,10,21)))
     bad={'verdicts':[dict(id='v1',claim_id='c2',violation_type='misleading_guarantee',
         severity='caution',reason='합성 판정',evidence_ids=['invented'])]}
     captured=[]
-    with pytest.raises(ValueError,match='근거 ID'):
-        asyncio.run(judge_ad(AD,ext,rules,[],model=fake_model([bad,bad],captured)))
+    result=asyncio.run(judge_ad(AD,ext,rules,[],model=fake_model([bad],captured)))
+    verdict=result.verdicts[0]
+    assert verdict.severity == 'needs_review'
+    assert verdict.original_severity == 'caution'
+    assert verdict.evidence_ids == []
+    assert verdict.unresolved_evidence_ids == ['invented']
+    assert verdict.suggested_revision is None
+    assert verdict.verification.source_exists == 'unavailable'
+    assert len(captured) == 1
     assert json.loads(captured[0][1].content)['regulations'][0]['chunk_id'] == rules[0].chunk_id
     assert 'version_id' not in json.loads(captured[0][1].content)['regulations'][0]
     assert rules[0].text == json.loads(captured[0][1].content)['regulations'][0]['text']
+
+
+def test_mixed_evidence_keeps_valid_reference_and_other_verdicts():
+    provider=FixedRegulationProvider.from_law_sample(ROOT/'samples/law/20261021T004141864078Z_article.json')
+    ext=ExtractionResult.model_validate(extraction())
+    rules=asyncio.run(provider.provide(ext.claims,as_of_date=date(2026,10,21)))
+    valid=rules[0].chunk_id
+    output={'verdicts':[
+        dict(id='v1',claim_id='c2',violation_type='misleading_guarantee',severity='caution',
+             reason='합성 혼합 근거',evidence_ids=[valid,'missing',valid,'missing'],suggested_revision='합성 수정'),
+        dict(id='v2',claim_id='c1',violation_type='exaggeration',severity='caution',
+             reason='합성 정상 판정',evidence_ids=[valid,valid]),
+    ]}
+    result=asyncio.run(judge_ad(AD,ext,rules,[],model=fake_model([output],[])))
+    assert len(result.verdicts)==2
+    first,second=result.verdicts
+    assert first.evidence_ids == [valid] and first.unresolved_evidence_ids == ['missing']
+    assert first.severity == 'needs_review' and first.suggested_revision is None
+    assert second.evidence_ids == [valid] and second.unresolved_evidence_ids == []
+    assert second.severity == 'caution' and second.original_severity is None
+
+
+def test_pipeline_finishes_partial_instead_of_failing_on_unknown_evidence():
+    provider=FixedRegulationProvider.from_law_sample(ROOT/'samples/law/20261021T004141864078Z_article.json')
+    output={'verdicts':[dict(id='v1',claim_id='c2',violation_type='misleading_guarantee',
+                            severity='caution',reason='합성 판정',evidence_ids=['missing'])]}
+    result=asyncio.run(review_ad(AD,provider=provider,as_of_date=date(2026,10,21),
+        extract_model=fake_model([extraction()],[]),judge_model=fake_model([output],[])))
+    assert result.run_status == 'partial'
+    assert result.judgment.verdicts[0].unresolved_evidence_ids == ['missing']
+    assert next(t for t in result.tasks if t.task_id=='judge').status == 'succeeded'
 
 
 def test_llm_cannot_self_certify_verification():

@@ -36,6 +36,8 @@ class Verdict(VerdictModel):
     severity: Literal["potential_violation", "caution", "needs_review"]
     reason: NonBlankText
     evidence_ids: list[NonBlankText] = Field(default_factory=list)
+    unresolved_evidence_ids: list[NonBlankText] = Field(default_factory=list, description='검색 결과에 없어 근거로 인정하지 않은 모델 참조')
+    original_severity: Literal['potential_violation', 'caution', 'needs_review'] | None = None
     suggested_revision: NonBlankText | None = None
     verification: VerificationResult = Field(default_factory=VerificationResult)
 
@@ -52,6 +54,11 @@ class Verdict(VerdictModel):
             raise ValueError("사람 확인 필요 판정에는 수정안을 노출하지 않습니다")
         if len(self.evidence_ids) != len(set(self.evidence_ids)):
             raise ValueError("근거 ID는 중복될 수 없습니다")
+        if self.unresolved_evidence_ids:
+            if self.severity != 'needs_review':
+                raise ValueError('확인되지 않은 근거가 있는 판정은 사람 확인이 필요합니다')
+            if set(self.evidence_ids) & set(self.unresolved_evidence_ids):
+                raise ValueError('확인된 근거와 미확인 근거는 분리해야 합니다')
         if any(getattr(self.verification, key) in ("failed", "unavailable") for key in (
             "source_exists", "wording_matches", "version_matches", "supports_verdict",
         )) and self.severity != "needs_review":
