@@ -1,0 +1,39 @@
+{
+  "schema_version": 1,
+  "status": "chunked",
+  "config": {
+    "chunk_size": 1200,
+    "strategy": "recursive-character-v1"
+  },
+  "normalized_snapshot": "20261021T043743991211Z-whole-article-v1",
+  "supplementary_indexed": false,
+  "documents": [
+    {
+      "file": "consumer_protection_act.normalized.chunks.jsonl",
+      "name": "금융소비자 보호에 관한 법률",
+      "articles": 73,
+      "chunks": 85,
+      "normalized_file": "consumer_protection_act.normalized.json",
+      "normalized_sha256": "a71aba438eca3d21e38239eefa2c387624c558a3a3782ed5303cef56cc604cc1",
+      "sha256": "d2170eaea917aa7e041bc49353816e8d816c7eb96c1c2f712d5bf46186a34196"
+    },
+    {
+      "file": "enforcement_decree.normalized.chunks.jsonl",
+      "name": "금융소비자 보호에 관한 법률 시행령",
+      "articles": 53,
+      "chunks": 65,
+      "normalized_file": "enforcement_decree.normalized.json",
+      "normalized_sha256": "4ccb844fe7033d40310a909b15b7d9e085f26ab8466fa077b71aaf00c43933ba",
+      "sha256": "ce4203b257d83a2f6ee949d18a09a13b36a1272639c1633b939494f63c82fb5a"
+    },
+    {
+      "file": "supervisory_regulation.normalized.chunks.jsonl",
+      "name": "금융소비자 보호에 관한 감독규정",
+      "articles": 36,
+      "chunks": 52,
+      "normalized_file": "supervisory_regulation.normalized.json",
+      "normalized_sha256": "169d36091b07a37bb0d5bc29bdf6baeb11d3c5866727fa442611e55d2c02731d",
+      "sha256": "2e417926aa2a808cd1bcd91342a996c3220da5a789dc11446ea61f2e3cdbdfa5"
+    }
+  ]
+}

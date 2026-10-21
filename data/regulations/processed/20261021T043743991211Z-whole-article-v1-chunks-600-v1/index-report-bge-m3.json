@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "status": "indexed",
+  "table_name": "regulations_7fea7c3cf436027efd4dfc28",
+  "chunk_snapshot": "20261021T043743991211Z-whole-article-v1-chunks-600-v1",
+  "corpus_hash": "47b242b4e9cbbcfb133d1fb9873eb5a72a16956388debbba7a560e7d02804c74",
+  "embedding": {
+    "provider": "ollama",
+    "model": "bge-m3",
+    "base_url": "http://localhost:11434",
+    "dimensions": 1024,
+    "document_format": "context-and-original-v1",
+    "input_validation": "ollama-no-truncation-v1"
+  },
+  "documents": 303,
+  "max_input_tokens": null,
+  "supplementary_indexed": false,
+  "snapshot_dates": [
+    "2026-10-21"
+  ],
+  "updated_at": "2026-10-21T05:50:14.280083+00:00",
+  "inserted": 303,
+  "skipped": 0,
+  "verified": 303
+}

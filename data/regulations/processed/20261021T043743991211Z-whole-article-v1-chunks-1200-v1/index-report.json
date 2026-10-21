@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "status": "failed",
+  "table_name": "regulations_56234b20974e60f2069e4e53",
+  "chunk_snapshot": "20261021T043743991211Z-whole-article-v1-chunks-1200-v1",
+  "corpus_hash": "274a62efad46a539ca6f6353f524c34804dee985180a594bee0feeb090057919",
+  "embedding": {
+    "provider": "openai",
+    "model": "text-embedding-3-small",
+    "base_url": "https://api.openai.com/v1",
+    "dimensions": 1536,
+    "document_format": "context-and-original-v1"
+  },
+  "documents": 202,
+  "max_input_tokens": 1405,
+  "supplementary_indexed": false,
+  "updated_at": "2026-10-21T05:14:09.490192+00:00",
+  "error_type": "RateLimitError",
+  "error_status_code": 429
+}

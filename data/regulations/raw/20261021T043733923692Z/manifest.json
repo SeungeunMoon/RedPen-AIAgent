@@ -1,0 +1,29 @@
+{
+  "schema_version": 1,
+  "status": "partial",
+  "snapshot_at": "2026-10-21T04:37:33.923841+00:00",
+  "ready_for_embedding": false,
+  "documents": [
+    {
+      "slug": "consumer_protection_act",
+      "name": "금융소비자 보호에 관한 법률",
+      "target": "eflaw",
+      "status": "failed",
+      "error_type": "RuntimeError"
+    },
+    {
+      "slug": "enforcement_decree",
+      "name": "금융소비자 보호에 관한 법률 시행령",
+      "target": "eflaw",
+      "status": "failed",
+      "error_type": "RuntimeError"
+    },
+    {
+      "slug": "supervisory_regulation",
+      "name": "금융소비자 보호에 관한 감독규정",
+      "target": "admrul",
+      "status": "failed",
+      "error_type": "RuntimeError"
+    }
+  ]
+}

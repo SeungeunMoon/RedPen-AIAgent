@@ -1,0 +1,54 @@
+{
+  "schema_version": 1,
+  "normalization_version": "whole-article-v1",
+  "raw_snapshot": "20261021T043743991211Z",
+  "status": "normalized",
+  "ready_for_embedding": false,
+  "supplementary_indexed": false,
+  "documents": [
+    {
+      "name": "금융소비자 보호에 관한 법률",
+      "file": "consumer_protection_act.normalized.json",
+      "document_id": "013704",
+      "source_version_id": "277247",
+      "articles": 73,
+      "headings": 14,
+      "supplementary_sections": [
+        "개정문",
+        "부칙",
+        "제개정이유"
+      ],
+      "sha256": "a71aba438eca3d21e38239eefa2c387624c558a3a3782ed5303cef56cc604cc1"
+    },
+    {
+      "name": "금융소비자 보호에 관한 법률 시행령",
+      "file": "enforcement_decree.normalized.json",
+      "document_id": "014044",
+      "source_version_id": "285715",
+      "articles": 53,
+      "headings": 0,
+      "supplementary_sections": [
+        "개정문",
+        "별표",
+        "부칙",
+        "제개정이유"
+      ],
+      "sha256": "4ccb844fe7033d40310a909b15b7d9e085f26ab8466fa077b71aaf00c43933ba"
+    },
+    {
+      "name": "금융소비자 보호에 관한 감독규정",
+      "file": "supervisory_regulation.normalized.json",
+      "document_id": "77048",
+      "source_version_id": "2100000285608",
+      "articles": 36,
+      "headings": 0,
+      "supplementary_sections": [
+        "별표",
+        "첨부파일",
+        "부칙",
+        "제개정이유"
+      ],
+      "sha256": "169d36091b07a37bb0d5bc29bdf6baeb11d3c5866727fa442611e55d2c02731d"
+    }
+  ]
+}

@@ -1,0 +1,73 @@
+{
+  "schema_version": 1,
+  "status": "downloaded",
+  "snapshot_at": "2026-10-21T04:37:43.991401+00:00",
+  "ready_for_embedding": false,
+  "documents": [
+    {
+      "slug": "consumer_protection_act",
+      "name": "금융소비자 보호에 관한 법률",
+      "target": "eflaw",
+      "status": "downloaded_unprocessed",
+      "search_file": "consumer_protection_act.search.json",
+      "document_id": "013704",
+      "version_id": "277247",
+      "body_file": "consumer_protection_act.json",
+      "request_parameters": {
+        "target": "eflaw",
+        "MST": "277247",
+        "efYd": "20260102"
+      },
+      "source_url": "https://www.law.go.kr/DRF/lawService.do?type=JSON&target=eflaw&MST=277247&efYd=20260102",
+      "effective_from": "20260102",
+      "fetched_at": "2026-10-21T04:37:44.709408+00:00",
+      "top_level_fields": [
+        "법령"
+      ],
+      "sha256": "f259102430628a4cb020b31178785b1ae6b0cc4cdb1e023d636109d79996632d"
+    },
+    {
+      "slug": "enforcement_decree",
+      "name": "금융소비자 보호에 관한 법률 시행령",
+      "target": "eflaw",
+      "status": "downloaded_unprocessed",
+      "search_file": "enforcement_decree.search.json",
+      "document_id": "014044",
+      "version_id": "285715",
+      "body_file": "enforcement_decree.json",
+      "request_parameters": {
+        "target": "eflaw",
+        "MST": "285715",
+        "efYd": "20260428"
+      },
+      "source_url": "https://www.law.go.kr/DRF/lawService.do?type=JSON&target=eflaw&MST=285715&efYd=20260428",
+      "effective_from": "20260428",
+      "fetched_at": "2026-10-21T04:37:45.301158+00:00",
+      "top_level_fields": [
+        "법령"
+      ],
+      "sha256": "a9de7dd8cb29bcb96eb8e2f9c776c802118002b45471843d78f566f85749ad21"
+    },
+    {
+      "slug": "supervisory_regulation",
+      "name": "금융소비자 보호에 관한 감독규정",
+      "target": "admrul",
+      "status": "downloaded_unprocessed",
+      "search_file": "supervisory_regulation.search.json",
+      "document_id": "77048",
+      "version_id": "2100000285608",
+      "body_file": "supervisory_regulation.json",
+      "request_parameters": {
+        "target": "admrul",
+        "ID": "2100000285608"
+      },
+      "source_url": "https://www.law.go.kr/DRF/lawService.do?type=JSON&target=admrul&ID=2100000285608",
+      "effective_from": "20261002",
+      "fetched_at": "2026-10-21T04:37:45.835042+00:00",
+      "top_level_fields": [
+        "AdmRulService"
+      ],
+      "sha256": "98368799d436ed88b740ebea61beadb611154c4f3ea33fe1df784cb5c4ce434f"
+    }
+  ]
+}
