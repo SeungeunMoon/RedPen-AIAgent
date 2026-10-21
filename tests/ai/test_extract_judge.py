@@ -10,7 +10,7 @@ import pytest
 from langchain_core.runnables import RunnableLambda
 
 from app.ai.stages.extract import extract_claims
-from app.ai.stages.judge import judge_ad
+from app.ai.stages.judge import ModelJudgmentResult, judge_ad
 from app.kb.empty import EmptyRegulationProvider
 from app.kb.fixed import FixedRegulationProvider
 from app.services.review_service import review_ad
@@ -18,6 +18,14 @@ from app.schemas.claim import ExtractionResult
 
 ROOT = Path(__file__).resolve().parents[2]
 AD = '12개월 정기예금, 세전 최고 연 4.5%. 누구나 보장.'
+
+
+def test_generation_schema_requires_evidence_for_supported_verdict():
+    definitions = ModelJudgmentResult.model_json_schema()['$defs']
+    supported = definitions['SupportedVerdict']
+    assert 'evidence_ids' in supported['required']
+    assert supported['properties']['evidence_ids']['minItems'] == 1
+    assert definitions['NeedsReviewVerdict']['properties']['suggested_revision']['type'] == 'null'
 
 
 def extraction():
@@ -87,6 +95,8 @@ def test_judge_receives_real_fixed_evidence_and_rejects_invented_id():
     with pytest.raises(ValueError,match='근거 ID'):
         asyncio.run(judge_ad(AD,ext,rules,[],model=fake_model([bad,bad],captured)))
     assert json.loads(captured[0][1].content)['regulations'][0]['chunk_id'] == rules[0].chunk_id
+    assert 'version_id' not in json.loads(captured[0][1].content)['regulations'][0]
+    assert rules[0].text == json.loads(captured[0][1].content)['regulations'][0]['text']
 
 
 def test_llm_cannot_self_certify_verification():

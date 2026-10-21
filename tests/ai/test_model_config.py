@@ -21,6 +21,7 @@ def test_default_is_local_ollama():
     assert isinstance(model, ChatOllama)
     assert model.base_url == "http://localhost:11434"
     assert model.temperature is None
+    assert model.num_ctx == 16384
 
 
 def test_openai_requires_key():
@@ -66,6 +67,7 @@ def test_llm_endpoint_does_not_change_embeddings():
 @pytest.mark.parametrize("values", [
     {"llm_provider": "unknown"}, {"llm_timeout_seconds": 0},
     {"llm_max_retries": -1}, {"llm_model": ""},
+    {'llm_num_ctx': 0},
 ])
 def test_invalid_settings_fail_early(values):
     with pytest.raises(ValidationError):

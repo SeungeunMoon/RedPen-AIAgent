@@ -67,3 +67,17 @@ def test_incomplete_index_is_rejected_without_db(tmp_path):
     report.write_text(json.dumps({'status':'failed'}))
     with pytest.raises(ValueError, match='완료 검증'):
         RagRegulationProvider.from_settings(Settings(rag_index_report=report))
+
+
+def test_mmr_uses_official_store_with_same_date_filter():
+    class MmrStore(Store):
+        def max_marginal_relevance_search(self, query, **kwargs):
+            self.queries.append((query, kwargs))
+            return []
+    store = MmrStore([])
+    provider = RagRegulationProvider(store, snapshot_date=date(2026,10,21), corpus_hash='a', search_method='mmr')
+    assert asyncio.run(provider.search_query('합성 질의',as_of_date=date(2026,10,21),k=5)) == []
+    options = store.queries[0][1]
+    assert options['k'] == 5 and options['fetch_k'] == 20
+    assert options['lambda_mult'] == 0.5
+    assert options['filter']['$and'][0] == {'corpus_hash':{'$eq':'a'}}
