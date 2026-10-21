@@ -1,0 +1,18 @@
+[project]
+name = "redpen-ai-agent"
+version = "0.1.0"
+description = "Financial advertisement review agent"
+requires-python = ">=3.11"
+dependencies = [
+    "langchain-core>=1,<2",
+    "langchain-openai>=1,<2",
+    "langchain-ollama>=1,<2",
+    "pydantic-settings>=2,<3",
+]
+
+[dependency-groups]
+dev = ["pytest>=8,<10"]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]
