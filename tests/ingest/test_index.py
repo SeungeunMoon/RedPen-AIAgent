@@ -1,6 +1,7 @@
 """실제 청크 검증 및 합성 저장소의 재실행/부분 실패 복구 계약."""
 
 import json
+import os
 from pathlib import Path
 
 import pytest
@@ -11,6 +12,13 @@ from app.core.config import Settings
 from ingest.index import load_documents, prepare_documents, write_documents
 
 SOURCE = Path(__file__).resolve().parents[2] / 'data/regulations/processed/20261021T043743991211Z-whole-article-v1-chunks-1200-v1'
+
+
+@pytest.fixture(autouse=True)
+def isolate_embedding_environment(monkeypatch):
+    for name in os.environ:
+        if name.startswith('EMBEDDING_'):
+            monkeypatch.delenv(name)
 
 
 class FakeStore:
@@ -79,14 +87,14 @@ def test_missing_final_rows_are_not_reported_complete():
 
 
 def test_embedding_factory_is_independent_of_chat_provider():
-    settings = Settings(_env_file=None, openai_api_key='test-key', llm_base_url='http://localhost:9999')
+    settings = Settings(_env_file=None, embedding_provider='openai', openai_api_key='test-key', llm_base_url='http://localhost:9999')
     embeddings = get_embeddings(settings=settings)
     assert embeddings.model == 'text-embedding-3-small'
     assert embeddings.dimensions == 1536
     assert embeddings.openai_api_base == 'https://api.openai.com/v1'
     assert embeddings.check_embedding_ctx_length is False
     with pytest.raises(ValueError, match='OPENAI_API_KEY'):
-        get_embeddings(settings=Settings(_env_file=None, openai_api_key=None))
+        get_embeddings(settings=Settings(_env_file=None, embedding_provider='openai', openai_api_key=None))
 
 
 def test_token_limit_and_embedding_identity(monkeypatch):
@@ -94,7 +102,7 @@ def test_token_limit_and_embedding_identity(monkeypatch):
         def encode(self, text, **kwargs):
             return list(text)
     monkeypatch.setattr('ingest.index.tiktoken.encoding_for_model', lambda model: SyntheticEncoding())
-    settings = Settings(_env_file=None)
+    settings = Settings(_env_file=None, embedding_provider='openai')
     docs = [Document(id='chunk-a', page_content='합성 문장')]
     first, prepared, maximum = prepare_documents(docs, settings, 'corpus-a')
     assert maximum == 5

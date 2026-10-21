@@ -1,0 +1,13 @@
+{
+  "Servers": {
+    "1": {
+      "Name": "Redpen local",
+      "Group": "Redpen",
+      "Host": "pgvector",
+      "Port": 5432,
+      "MaintenanceDB": "redpen",
+      "Username": "redpen",
+      "SSLMode": "prefer"
+    }
+  }
+}

@@ -17,5 +17,21 @@ services:
       timeout: 3s
       retries: 20
 
+  pgadmin:
+    image: dpage/pgadmin4:9.18
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${REDPEN_PGADMIN_EMAIL:-admin@redpen.dev}
+      PGADMIN_DEFAULT_PASSWORD: ${REDPEN_PGADMIN_PASSWORD:-redpen}
+      PGADMIN_DISABLE_POSTFIX: "1"
+    ports:
+      - "127.0.0.1:5050:80"
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+      - ./pgadmin/servers.json:/pgadmin4/servers.json:ro
+    depends_on:
+      pgvector:
+        condition: service_healthy
+
 volumes:
   pgvector_data:
+  pgadmin_data:

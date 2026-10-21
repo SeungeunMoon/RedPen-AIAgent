@@ -56,7 +56,9 @@ def test_dotenv_and_environment_precedence(tmp_path, monkeypatch):
 
 def test_llm_endpoint_does_not_change_embeddings():
     settings = Settings(_env_file=None, llm_base_url="http://localhost:9999")
-    assert settings.embedding_base_url == "https://api.openai.com/v1"
+    assert settings.embedding_base_url == "http://localhost:11434"
+    assert settings.embedding_model == 'bge-m3'
+    assert settings.embedding_dimensions == 1024
     with pytest.raises(ValidationError):
         Settings(_env_file=None, embedding_model="another-model")
 

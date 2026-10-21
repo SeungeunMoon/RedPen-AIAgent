@@ -14,7 +14,8 @@ from ingest.index import open_store, write_documents
 
 @pytest.mark.skipif(os.environ.get('REDPEN_PGVECTOR_INTEGRATION') != '1', reason='로컬 pgvector 선택 실행')
 def test_actual_pgvector_roundtrip_and_idempotency():
-    settings = Settings(_env_file=None, llm_provider='ollama')
+    settings = Settings(_env_file=None, llm_provider='ollama', embedding_provider='openai',
+                        embedding_model='text-embedding-3-small', embedding_base_url='https://api.openai.com/v1')
     embeddings = DeterministicFakeEmbedding(size=1536)
     engine, store = open_store(settings, 'test_regulation_ingest_v1', embeddings)
     documents = [Document(

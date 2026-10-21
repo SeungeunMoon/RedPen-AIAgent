@@ -31,9 +31,10 @@ class Settings(BaseSettings):
     openai_api_key: SecretStr | None = None
 
     # LLM 전환과 독립. 규정 적재와 검색에서 동일한 임베딩을 사용한다.
-    embedding_model: Literal["text-embedding-3-small"] = "text-embedding-3-small"
-    embedding_base_url: str = "https://api.openai.com/v1"
-    embedding_timeout_seconds: float = Field(default=60, gt=0)
+    embedding_provider: Literal['openai', 'ollama'] = 'ollama'
+    embedding_model: str | None = None
+    embedding_base_url: str | None = None
+    embedding_timeout_seconds: float = Field(default=180, gt=0)
     embedding_max_retries: int = Field(default=1, ge=0)
     pgvector_connection: SecretStr = SecretStr(
         'postgresql+psycopg://redpen:redpen@127.0.0.1:5433/redpen'
@@ -44,6 +45,24 @@ class Settings(BaseSettings):
         if self.llm_provider == "openai" and self.openai_api_key is None:
             raise ValueError("LLM_PROVIDER=openai 사용 시 OPENAI_API_KEY가 필요합니다")
         return self
+
+    @model_validator(mode='after')
+    def resolve_embedding_profile(self) -> 'Settings':
+        model, url = {
+            'openai': ('text-embedding-3-small', 'https://api.openai.com/v1'),
+            'ollama': ('bge-m3', 'http://localhost:11434'),
+        }[self.embedding_provider]
+        if self.embedding_model is None:
+            self.embedding_model = model
+        if self.embedding_model != model:
+            raise ValueError(f'{self.embedding_provider} 임베딩은 현재 {model} 프로필만 지원합니다')
+        if self.embedding_base_url is None:
+            self.embedding_base_url = url
+        return self
+
+    @property
+    def embedding_dimensions(self) -> int:
+        return 1024 if self.embedding_provider == 'ollama' else 1536
 
     def model_for(self, role: ModelRole | None = None) -> str:
         if role is None:

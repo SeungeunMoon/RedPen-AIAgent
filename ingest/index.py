@@ -1,4 +1,4 @@
-"""청킹 결과를 검증하고 OpenAI 임베딩을 pgvector에 적재한다."""
+"""청킹 결과를 검증하고 선택한 임베딩을 pgvector에 적재한다."""
 
 import argparse
 import asyncio
@@ -14,7 +14,7 @@ from langchain_core.documents import Document
 from langchain_core.embeddings import Embeddings
 from langchain_postgres import PGEngine, PGVectorStore
 
-from app.ai.embeddings import EMBEDDING_DIMENSIONS, EMBEDDING_MAX_TOKENS, get_embeddings
+from app.ai.embeddings import EMBEDDING_MAX_TOKENS, get_embeddings
 from app.core.config import Settings
 from app.core.environment import load_runtime_environment
 from ingest.chunk import ChunkingConfig, SearchChunk
@@ -56,23 +56,24 @@ def load_documents(input_dir: Path) -> tuple[list[Document], str]:
 
 def embedding_spec(settings: Settings) -> dict:
     return {
-        'provider': 'openai', 'model': settings.embedding_model,
-        'base_url': settings.embedding_base_url, 'dimensions': EMBEDDING_DIMENSIONS,
+        'provider': settings.embedding_provider, 'model': settings.embedding_model,
+        'base_url': settings.embedding_base_url, 'dimensions': settings.embedding_dimensions,
         'document_format': 'context-and-original-v1',
+        'input_validation': 'ollama-no-truncation-v1' if settings.embedding_provider == 'ollama' else 'tiktoken-v1',
     }
 
 
-def prepare_documents(documents: list[Document], settings: Settings, corpus_hash: str) -> tuple[str, list[Document], int]:
+def prepare_documents(documents: list[Document], settings: Settings, corpus_hash: str) -> tuple[str, list[Document], int | None]:
     spec = embedding_spec(settings)
     digest = hashlib.sha256(json.dumps(
         {'corpus': corpus_hash, 'embedding': spec}, sort_keys=True,
     ).encode()).hexdigest()
     table_name = f'regulations_{digest[:24]}'
-    encoding = tiktoken.encoding_for_model(settings.embedding_model)
+    encoding = tiktoken.encoding_for_model(settings.embedding_model) if settings.embedding_provider == 'openai' else None
     maximum = 0
     prepared = []
     for document in documents:
-        tokens = len(encoding.encode(document.page_content, disallowed_special=()))
+        tokens = len(encoding.encode(document.page_content, disallowed_special=())) if encoding else 0
         if tokens > EMBEDDING_MAX_TOKENS:
             raise ValueError(f'임베딩 입력 토큰 초과: {document.id}; 청크 크기를 줄이세요')
         maximum = max(maximum, tokens)
@@ -81,7 +82,7 @@ def prepare_documents(documents: list[Document], settings: Settings, corpus_hash
             page_content=document.page_content,
             metadata={**document.metadata, 'corpus_hash': corpus_hash, 'embedding_spec': spec},
         ))
-    return table_name, prepared, maximum
+    return table_name, prepared, maximum if encoding else None
 
 
 def write_documents(store, documents: list[Document], batch_size: int = 32) -> dict:
@@ -125,7 +126,7 @@ def open_store(settings: Settings, table_name: str, embeddings: Embeddings):
         with psycopg.connect(connection.replace('postgresql+psycopg://', 'postgresql://', 1), connect_timeout=5) as conn:
             exists = conn.execute('SELECT to_regclass(%s)', (f'public.{table_name}',)).fetchone()[0]
         if exists is None:
-            engine.init_vectorstore_table(table_name=table_name, vector_size=EMBEDDING_DIMENSIONS)
+            engine.init_vectorstore_table(table_name=table_name, vector_size=settings.embedding_dimensions)
         store = PGVectorStore.create_sync(engine=engine, table_name=table_name, embedding_service=embeddings)
         return engine, store
     except Exception:
@@ -156,6 +157,9 @@ def index_snapshot(input_dir: Path, output: Path, settings: Settings, *, dry_run
     save('indexing')
     engine = None
     try:
+        probe = embeddings.embed_query('임베딩 차원 확인')
+        if len(probe) != settings.embedding_dimensions:
+            raise ValueError('실제 임베딩 차원이 모델 프로필과 다릅니다')
         engine, store = open_store(settings, table_name, embeddings)
         summary.update(write_documents(store, documents))
         save('indexed')
