@@ -1,27 +1,16 @@
-"""초기 순차 실행: 추출 → 규정 제공 → 수치 대조 → 미검증 판정."""
+"""검토 서비스 진입점. 업무 순서와 상태 관리는 LangGraph에 위임한다."""
 
 from datetime import date
 
 from langchain_core.language_models.chat_models import BaseChatModel
-from langchain_core.runnables import RunnableLambda
-from pydantic import BaseModel, ConfigDict
 
-from app.ai.stages.extract import extract_claims
-from app.ai.stages.factcheck import compare_rate
-from app.ai.stages.judge import JudgmentResult, judge_ad
+from app.ai.workflow import ReviewContext, build_review_graph
 from app.kb.provider import RegulationProvider
-from app.schemas.claim import ExtractionResult
-from app.schemas.product import ProductSnapshot, RateComparison
-from app.schemas.regulation import RegulationChunk
+from app.schemas.product import ProductSnapshot
+from app.schemas.run import ReviewDraft
 
-
-class ReviewDraft(BaseModel):
-    model_config = ConfigDict(extra='forbid')
-    extraction: ExtractionResult
-    regulations: list[RegulationChunk]
-    comparisons: list[RateComparison]
-    judgment: JudgmentResult
-    verification_status: str = 'not_performed'
+# 그래프 구조는 재사용하되 상태와 의존성은 매 호출마다 전달한다.
+_graph = build_review_graph()
 
 
 async def review_ad(
@@ -29,13 +18,11 @@ async def review_ad(
     product: ProductSnapshot | None = None, extract_model: BaseChatModel | None = None,
     judge_model: BaseChatModel | None = None,
 ) -> ReviewDraft:
-    async def run(text: str) -> ReviewDraft:
-        extraction = await extract_claims(text, model=extract_model)
-        regulations = await provider.provide(extraction.claims, as_of_date=as_of_date)
-        comparisons = [compare_rate(c, product, as_of_date=as_of_date)
-                       for c in extraction.claims if c.kind == 'interest_rate']
-        judgment = await judge_ad(text, extraction, regulations, comparisons,
-                                  product=product, model=judge_model)
-        return ReviewDraft(extraction=extraction, regulations=regulations,
-                           comparisons=comparisons, judgment=judgment)
-    return await RunnableLambda(run).with_config({'run_name': 'review_ad_draft'}).ainvoke(ad_text)
+    if not ad_text.strip():
+        raise ValueError('광고 원문이 비어 있습니다')
+    result = await _graph.ainvoke(
+        {'ad_text': ad_text, 'as_of_date': as_of_date, 'product': product},
+        context=ReviewContext(provider=provider, extract_model=extract_model, judge_model=judge_model),
+        config={'run_name': 'review_ad_draft'},
+    )
+    return result['draft']

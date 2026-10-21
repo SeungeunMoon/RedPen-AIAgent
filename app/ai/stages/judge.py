@@ -7,18 +7,14 @@ from collections.abc import Sequence
 from langchain_core.exceptions import OutputParserException
 from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_core.prompts import ChatPromptTemplate
-from pydantic import BaseModel, ConfigDict, ValidationError
+from pydantic import ValidationError
 
 from app.ai.llm import get_chat_model
+from app.ai.errors import StageOutputError
 from app.schemas.claim import ExtractionResult
 from app.schemas.product import ProductSnapshot, RateComparison
 from app.schemas.regulation import RegulationChunk
-from app.schemas.verdict import Verdict, VerificationResult
-
-
-class JudgmentResult(BaseModel):
-    model_config = ConfigDict(extra='forbid')
-    verdicts: list[Verdict]
+from app.schemas.verdict import JudgmentResult, VerificationResult
 
 
 async def judge_ad(
@@ -65,8 +61,8 @@ async def judge_ad(
                 # LLM의 자체 검증 주장을 제거한다. 실제 검증은 아직 수행하지 않았다.
                 verdict.verification = VerificationResult()
             return result
-        except (ValueError, ValidationError, OutputParserException):
+        except (ValueError, ValidationError, OutputParserException) as error:
             if attempt:
-                raise
+                raise StageOutputError(str(error)) from error
             feedback = '허용된 ID, 근거, 대조 상태를 다시 확인하세요. 확인되지 않은 금리 판정은 needs_review로 두세요.'
     raise RuntimeError('판정 재시도 종료')

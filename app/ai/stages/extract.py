@@ -8,6 +8,7 @@ from langchain_core.exceptions import OutputParserException
 from pydantic import ValidationError
 
 from app.ai.llm import get_chat_model
+from app.ai.errors import StageOutputError
 from app.schemas.claim import ExtractionResult, TextSpan
 
 PROMPT = Path(__file__).resolve().parents[1] / 'prompts/extract.txt'
@@ -41,8 +42,8 @@ async def extract_claims(ad_text: str, *, model: BaseChatModel | None = None) ->
                 if ad_text.find(claim.quote, start + 1) == -1:
                     claim.span = TextSpan(start=start, end=start + len(claim.quote))
             return result
-        except (ValueError, ValidationError, OutputParserException):
+        except (ValueError, ValidationError, OutputParserException) as error:
             if attempt:
-                raise
+                raise StageOutputError(str(error)) from error
             feedback = '스키마와 원문 인용을 다시 확인하세요. 원문에 없는 구절이나 조건을 만들지 마세요.'
     raise RuntimeError('추출 재시도 종료')

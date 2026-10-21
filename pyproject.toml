@@ -4,6 +4,7 @@ version = "0.1.0"
 description = "Financial advertisement review agent"
 requires-python = ">=3.11"
 dependencies = [
+    "langgraph>=1,<2",
     "langchain-core>=1,<2",
     "langchain-openai>=1,<2",
     "langchain-ollama>=1,<2",

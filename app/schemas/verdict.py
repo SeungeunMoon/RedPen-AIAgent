@@ -61,3 +61,7 @@ class Verdict(VerdictModel):
     def validate_evidence(self, allowed_ids: set[str]) -> None:
         if set(self.evidence_ids) - allowed_ids:
             raise ValueError("검색 결과에 없는 근거 ID입니다")
+
+
+class JudgmentResult(VerdictModel):
+    verdicts: list[Verdict]
