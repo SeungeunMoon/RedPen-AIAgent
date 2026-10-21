@@ -26,8 +26,10 @@ class CreateRun(BaseModel):
 
 
 @router.get('/health')
-def health():
-    return {'status':'ok','data_mode':'fixed_samples','snapshot_date':SNAPSHOT_DATE.isoformat(),
+def health(request: Request):
+    provider = request.app.state.manager.provider
+    kind = {'RagRegulationProvider':'rag', 'FixedRegulationProvider':'fixed', 'EmptyRegulationProvider':'empty'}[type(provider).__name__]
+    return {'status':'ok','data_mode':'stored_snapshots','regulation_provider':kind,'snapshot_date':SNAPSHOT_DATE.isoformat(),
             'verification':'not_performed'}
 
 
@@ -41,7 +43,7 @@ def products(request: Request,q: str=''):
 async def create_run(body: CreateRun,request: Request):
     manager=request.app.state.manager
     if body.as_of_date != SNAPSHOT_DATE:
-        raise HTTPException(422,'현재 고정 규정 샘플의 검토 기준일은 2026-10-21입니다.')
+        raise HTTPException(422,'현재 규정·공시 스냅샷의 검토 기준일은 2026-10-21입니다.')
     if body.product_id is not None and body.product_id not in manager.products:
         raise HTTPException(422,'선택한 공시 상품을 찾지 못했습니다.')
     try:

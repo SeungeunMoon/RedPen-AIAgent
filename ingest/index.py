@@ -7,17 +7,16 @@ import json
 from datetime import datetime, timezone
 from pathlib import Path
 from uuid import NAMESPACE_URL, uuid5
+from zoneinfo import ZoneInfo
 
-import psycopg
 import tiktoken
 from langchain_core.documents import Document
-from langchain_core.embeddings import Embeddings
-from langchain_postgres import PGEngine, PGVectorStore
 
 from app.ai.embeddings import EMBEDDING_MAX_TOKENS, get_embeddings
 from app.core.config import Settings
 from app.core.environment import load_runtime_environment
 from ingest.chunk import ChunkingConfig, SearchChunk
+from app.kb.vectorstore import embedding_spec, open_store
 
 
 def load_documents(input_dir: Path) -> tuple[list[Document], str]:
@@ -52,15 +51,6 @@ def load_documents(input_dir: Path) -> tuple[list[Document], str]:
     if not documents:
         raise ValueError('적재할 청크가 없습니다')
     return documents, hashlib.sha256(manifest_bytes).hexdigest()
-
-
-def embedding_spec(settings: Settings) -> dict:
-    return {
-        'provider': settings.embedding_provider, 'model': settings.embedding_model,
-        'base_url': settings.embedding_base_url, 'dimensions': settings.embedding_dimensions,
-        'document_format': 'context-and-original-v1',
-        'input_validation': 'ollama-no-truncation-v1' if settings.embedding_provider == 'ollama' else 'tiktoken-v1',
-    }
 
 
 def prepare_documents(documents: list[Document], settings: Settings, corpus_hash: str) -> tuple[str, list[Document], int | None]:
@@ -116,24 +106,6 @@ def write_documents(store, documents: list[Document], batch_size: int = 32) -> d
     return {'inserted': inserted, 'skipped': skipped, 'verified': len(documents)}
 
 
-def open_store(settings: Settings, table_name: str, embeddings: Embeddings):
-    """데이터/모델별 전용 테이블. 기존 테이블이나 데이터를 삭제하지 않는다."""
-    connection = settings.pgvector_connection.get_secret_value()
-    if not connection.startswith('postgresql+psycopg://'):
-        raise ValueError('PGVECTOR_CONNECTION은 postgresql+psycopg:// 형식이어야 합니다')
-    engine = PGEngine.from_connection_string(url=connection, connect_args={'connect_timeout': 5})
-    try:
-        with psycopg.connect(connection.replace('postgresql+psycopg://', 'postgresql://', 1), connect_timeout=5) as conn:
-            exists = conn.execute('SELECT to_regclass(%s)', (f'public.{table_name}',)).fetchone()[0]
-        if exists is None:
-            engine.init_vectorstore_table(table_name=table_name, vector_size=settings.embedding_dimensions)
-        store = PGVectorStore.create_sync(engine=engine, table_name=table_name, embedding_service=embeddings)
-        return engine, store
-    except Exception:
-        asyncio.run(engine.close())
-        raise
-
-
 def index_snapshot(input_dir: Path, output: Path, settings: Settings, *, dry_run: bool = False) -> dict:
     documents, corpus_hash = load_documents(input_dir)
     table_name, documents, maximum = prepare_documents(documents, settings, corpus_hash)
@@ -142,6 +114,7 @@ def index_snapshot(input_dir: Path, output: Path, settings: Settings, *, dry_run
         'chunk_snapshot': input_dir.name, 'corpus_hash': corpus_hash,
         'embedding': embedding_spec(settings), 'documents': len(documents),
         'max_input_tokens': maximum, 'supplementary_indexed': False,
+        'snapshot_dates': sorted({datetime.fromisoformat(doc.metadata['regulation']['fetched_at']).astimezone(ZoneInfo('Asia/Seoul')).date().isoformat() for doc in documents}),
     }
     if dry_run:
         return summary

@@ -26,7 +26,7 @@ const available = computed(() => (report.value?.judgment?.verdicts ?? receivedVe
 }))
 const visible = computed(() => available.value.filter(i => filter.value === '전체' || i.level === filter.value))
 const counts = computed(() => Object.fromEntries(Object.values(level).map(l => [l, available.value.filter(i => i.level === l).length])))
-const stepNames = ['문구 추출', '고정 규정 제공', '공시 수치 대조', 'AI 1차 판정']
+const stepNames = ['문구 추출', '규정 근거 조회', '공시 수치 대조', 'AI 1차 판정']
 const stepKinds = ['extract', 'retrieve', 'factcheck', 'judge']
 const stage = computed(() => {
   const current = tasks.value.find(t => t.status === 'running')
@@ -83,14 +83,14 @@ onUnmounted(() => clearTimeout(toastTimer))
    <div class="workspace-label">WORKSPACE</div>
    <button class="nav-item selected" @click="notify('현재 광고 사전심의 화면입니다')"><span class="nav-icon">▤</span> 광고 사전심의 <span class="nav-arrow">›</span></button>
    <div class="side-note"><span class="tiny-icon">✧</span><strong>더 명확한 근거,<br>더 확신 있는 검토.</strong><p>광고 문구부터 규정 근거까지,<br>RedPen과 함께 확인하세요.</p><span class="note-line"></span></div>
-   <div class="sidebar-bottom"><div class="demo-pill"><i></i> AI CONNECTED DEMO</div><p>고정 규정·공시 스냅샷 사용</p><div class="profile"><span class="avatar">M</span><div><strong>심의 담당자</strong><small>준법감시팀</small></div></div></div>
+   <div class="sidebar-bottom"><div class="demo-pill"><i></i> AI CONNECTED DEMO</div><p>규정 조회·공시 스냅샷 사용</p><div class="profile"><span class="avatar">M</span><div><strong>심의 담당자</strong><small>준법감시팀</small></div></div></div>
   </aside>
   <main>
    <header class="topbar"><div>워크스페이스 <span>/</span> <b>광고 사전심의</b></div><div class="top-right"><span class="mock-label">DEMO</span><span class="top-divider"></span>AI 1차 검토</div></header>
    <div class="page-content">
     <div class="heading-row"><div><div class="eyebrow">FINANCIAL AD REVIEW</div><h1>광고 사전심의<span>.</span></h1><p>광고의 작은 문구까지, 근거를 바탕으로 꼼꼼하게.</p></div><button class="button secondary new-review" :disabled="running" @click="reset">＋ 새 검토</button></div>
-    <div class="review-meta"><span class="document-icon">▤</span><strong>예·적금 광고 검토</strong><span class="tag">고정 데이터</span><div class="meta-right"><span class="status-dot" :class="{ pulse: running }"></span>{{running?'검토 진행 중':mode==='input'?'작성 중':mode==='failed'?'검토 실패':'검토 종료'}}<span class="meta-date">기준일 {{asOf}}</span></div></div>
-    <div class="data-notice">ⓘ 규정은 제22조 고정 샘플, 공시는 저장된 스냅샷을 사용합니다. 실제 모델로 검토하며 원천 검증은 미수행입니다.</div>
+    <div class="review-meta"><span class="document-icon">▤</span><strong>예·적금 광고 검토</strong><span class="tag">스냅샷 데이터</span><div class="meta-right"><span class="status-dot" :class="{ pulse: running }"></span>{{running?'검토 진행 중':mode==='input'?'작성 중':mode==='failed'?'검토 실패':'검토 종료'}}<span class="meta-date">기준일 {{asOf}}</span></div></div>
+    <div class="data-notice">ⓘ 규정은 설정한 공급자에서 조회하며, 공시는 저장된 스냅샷을 사용합니다. 실제 모델로 검토하며 원천 검증은 미수행입니다.</div>
     <p v-if="loadError" class="error-banner" role="alert">서버 연결 실패: {{loadError}} · FastAPI 실행 여부를 확인한 뒤 새로고침하세요.</p>
     <div v-if="error" class="error-banner" role="alert">{{error}} <button v-if="mode==='failed'" class="button secondary" @click="start">같은 문안 재시도</button><button v-if="mode==='failed'" class="button secondary" @click="clear">문안 수정</button></div>
     <section v-if="mode!=='input'" class="progress-panel">
@@ -131,7 +131,7 @@ onUnmounted(() => clearTimeout(toastTimer))
       </template>
      </section>
     </div>
-    <footer><span class="footer-brand">redpen.</span><span>고정 규정·공시 데이터 · 실제 AI 호출</span><span>원천 검증 미수행 · 최종 심의는 담당자 확인</span></footer>
+    <footer><span class="footer-brand">redpen.</span><span>규정 조회·공시 스냅샷 · 실제 AI 호출</span><span>원천 검증 미수행 · 최종 심의는 담당자 확인</span></footer>
    </div>
   </main>
   <div v-if="toast" class="toast" role="status">{{toast}}</div>

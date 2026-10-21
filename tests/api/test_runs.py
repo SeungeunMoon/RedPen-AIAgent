@@ -12,6 +12,7 @@ from app.schemas.verdict import JudgmentResult
 
 @pytest.fixture
 def client(monkeypatch):
+    monkeypatch.setenv('REGULATION_PROVIDER','fixed')
     monkeypatch.setenv('LANGSMITH_TRACING','false')
     monkeypatch.setenv('LANGCHAIN_TRACING_V2','false')
     from app.main import create_app

@@ -36,6 +36,10 @@ class Settings(BaseSettings):
     embedding_base_url: str | None = None
     embedding_timeout_seconds: float = Field(default=180, gt=0)
     embedding_max_retries: int = Field(default=1, ge=0)
+    regulation_provider: Literal['rag', 'fixed', 'empty'] = 'rag'
+    rag_index_report: Path = PROJECT_ROOT / 'data/regulations/processed/20261021T043743991211Z-whole-article-v1-chunks-1200-v1/index-report-bge-m3.json'
+    rag_top_k: int = Field(default=4, ge=1, le=20)
+    rag_max_chunks: int = Field(default=12, ge=1, le=40)
     pgvector_connection: SecretStr = SecretStr(
         'postgresql+psycopg://redpen:redpen@127.0.0.1:5433/redpen'
     )

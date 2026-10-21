@@ -4,6 +4,7 @@ from app.core.environment import load_runtime_environment
 load_runtime_environment()
 
 from contextlib import asynccontextmanager
+import asyncio
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException
@@ -18,10 +19,14 @@ DIST=Path(__file__).resolve().parents[1]/'web/dist'
 
 @asynccontextmanager
 async def lifespan(app):
-    provider,products=load_demo_data()
+    provider,products=await asyncio.to_thread(load_demo_data)
     app.state.manager=RunManager(provider,products)
-    yield
-    await app.state.manager.close()
+    try:
+        yield
+    finally:
+        await app.state.manager.close()
+        if hasattr(provider, 'aclose'):
+            await provider.aclose()
 
 
 def create_app():
