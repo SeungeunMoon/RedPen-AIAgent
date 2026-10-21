@@ -160,12 +160,13 @@ def main():
     parser.add_argument('--dry-run', action='store_true', help='파일·토큰만 검사. API/DB 호출 없음')
     args = parser.parse_args()
     load_runtime_environment()
-    output = args.output or args.input / 'index-report.json'
     try:
-        summary = index_snapshot(args.input, output, Settings(), dry_run=args.dry_run)
+        settings = Settings()
+        output = args.output or args.input / f'index-report-{settings.embedding_model}.json'
+        summary = index_snapshot(args.input, output, settings, dry_run=args.dry_run)
     except Exception as error:
         # SDK·DB 예외 문자열에는 접속 정보가 포함될 수 있어 기본 CLI에 출력하지 않는다.
-        parser.exit(1, f'적재 실패 ({type(error).__name__}). 환경 설정과 index-report.json의 상태를 확인하세요.\n')
+        parser.exit(1, f'적재 실패 ({type(error).__name__}). 환경 설정과 index-report-모델명.json의 상태를 확인하세요.\n')
     print(json.dumps(summary, ensure_ascii=False, indent=2))
 
 
