@@ -96,7 +96,7 @@ onUnmounted(() => clearTimeout(toastTimer))
     <section v-if="mode!=='input'" class="progress-panel">
      <div class="progress-title"><span class="success-ring">{{running?'◌':mode==='failed'?'!':'✓'}}</span><strong>{{running?(reconnecting?'진행 연결을 복구하고 있어요':'광고 문안을 검토하고 있어요'):mode==='failed'?'검토가 완료되지 않았습니다':'AI 1차 검토가 끝났습니다 · 근거 검증 미수행'}}</strong><span>{{running?currentTask:report?.run_status}}</span></div>
      <div class="steps"><div v-for="(step,index) in stepNames" :key="step" class="step" :class="{complete:stage>index,current:running&&stage===index}"><span class="step-circle">{{stage>index?'✓':index+1}}</span>{{step}}<span v-if="index<3" class="step-connector"></span></div></div>
-     <details v-if="tasks.length" class="task-details"><summary>Supervisor 작업 내역 ({{tasks.length}}개)</summary><div v-for="task in tasks" :key="task.task_id"><code>{{task.task_id}}</code><span>{{taskStatus[task.status]}} · {{task.attempts ?? task.attempt ?? 0}}회 {{task.feedback ?? task.reason ?? ''}} {{task.error_code ?? ''}}</span></div></details>
+     <details v-if="tasks.length" class="task-details"><summary>Supervisor 작업 내역 ({{tasks.length}}개)</summary><div v-for="task in tasks" :key="task.task_id"><code>{{task.task_id}}</code><span>{{taskStatus[task.status]}} · {{task.attempts ?? task.attempt ?? 0}}회 {{task.feedback ?? task.reason ?? ''}} {{task.error_code ?? ''}} <code v-if="task.diagnostic_id">진단: {{task.diagnostic_id}}</code></span></div></details>
     </section>
     <div class="review-grid">
      <section class="panel source-panel">
