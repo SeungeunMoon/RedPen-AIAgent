@@ -9,6 +9,7 @@ from typing import Annotated
 
 from pydantic import (
     AwareDatetime,
+    AfterValidator,
     BaseModel,
     ConfigDict,
     Field,
@@ -18,7 +19,14 @@ from pydantic import (
 )
 
 # 공백뿐인 값은 거부하되 원문 자체를 strip하거나 변경하지 않는다.
-NonBlankText = Annotated[str, StringConstraints(min_length=1, pattern=r"\S")]
+def _require_nonblank(value: str) -> str:
+    if not value.strip():
+        raise ValueError("공백만 있는 문자열은 허용하지 않습니다")
+    return value
+
+
+# 제공자마다 정규식 지원이 달라 공백 검증은 Pydantic에서 수행한다.
+NonBlankText = Annotated[str, StringConstraints(min_length=1), AfterValidator(_require_nonblank)]
 
 
 class RegulationChunk(BaseModel):

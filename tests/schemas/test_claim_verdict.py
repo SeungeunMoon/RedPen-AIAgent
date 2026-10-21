@@ -49,3 +49,13 @@ def test_comparison_uses_percentage_points():
     assert comparison.difference_pp == Decimal('0.7')
     with pytest.raises(ValidationError):
         RateComparison(**{**comparison.model_dump(),'difference_pp':'0.6'})
+
+
+def test_model_judgment_schema_requires_claim_reference():
+    from app.schemas.verdict import ClaimVerdict, JudgmentResult
+    assert 'claim_id' in ClaimVerdict.model_json_schema()['required']
+    with pytest.raises(ValidationError):
+        JudgmentResult.model_validate({'verdicts':[{
+            'id':'v1','violation_type':'disclosure_mismatch',
+            'severity':'needs_review','reason':'합성 테스트',
+        }]})

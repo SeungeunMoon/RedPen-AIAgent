@@ -6,6 +6,11 @@ import json
 from datetime import date, datetime
 from pathlib import Path
 
+from app.core.environment import load_runtime_environment
+
+# LangChain/LangSmith 초기화 전에 적용한다. 인증값은 출력하지 않는다.
+load_runtime_environment()
+
 from app.kb.empty import EmptyRegulationProvider
 from app.kb.fixed import FixedRegulationProvider
 from app.schemas.external.disclosure import DisclosureResponse

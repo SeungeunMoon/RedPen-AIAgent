@@ -63,5 +63,12 @@ class Verdict(VerdictModel):
             raise ValueError("검색 결과에 없는 근거 ID입니다")
 
 
+class ClaimVerdict(Verdict):
+    """현재 문구 판정 출력에서는 Claim 참조가 필수다."""
+
+    claim_id: NonBlankText = Field(description="입력 extraction.claims의 id. 판정 자체의 id와 별개")
+    violation_type: Literal['disclosure_mismatch', 'exaggeration', 'misleading_guarantee']
+
+
 class JudgmentResult(VerdictModel):
-    verdicts: list[Verdict]
+    verdicts: list[ClaimVerdict]

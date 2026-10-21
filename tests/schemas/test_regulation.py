@@ -53,3 +53,13 @@ def test_rejects_invalid_boundary_data(chunk_data, field, value):
 def test_rejects_unexpected_fields(chunk_data):
     with pytest.raises(ValidationError, match="extra_forbidden"):
         RegulationChunk.model_validate({**chunk_data, "법령ID": "013704"})
+
+
+def test_nonblank_contract_is_provider_compatible_and_preserves_multiline(chunk_data):
+    from app.schemas.claim import ExtractionResult
+    from app.schemas.verdict import JudgmentResult
+    import json
+    assert '"pattern"' not in json.dumps(ExtractionResult.model_json_schema())
+    assert '"pattern"' not in json.dumps(JudgmentResult.model_json_schema())
+    chunk=RegulationChunk.model_validate({**chunk_data,'text':'\n  본문\n'})
+    assert chunk.text == '\n  본문\n'
